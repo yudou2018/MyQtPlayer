@@ -8,10 +8,21 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     this->setWindowTitle("MyQtPlayer");
     connect(ui->btnQuit,&QPushButton::clicked,this,&QWidget::close);
+    ui->lblTime->setText(QString::number(0));
 
-    connect(ui->actOpen,&QAction::triggered,[=](){
-        QString path = QFileDialog::getOpenFileName(this,"Open File","D:/resource");
+    // 视频处理
+    pPlayer = new QMediaPlayer(this); // 放映员
+    pPlaylist = new QMediaPlaylist(this); // 胶卷
+    pVideoWidget = new QVideoWidget(ui->lblVideo); // 屏幕
+    pPlaylist->clear();
+    pPlayer->setPlaylist(pPlaylist);
+    pPlayer->setVideoOutput(pVideoWidget);
+
+    connect(ui->actionOpen,&QAction::triggered,[=](){
+        QString path = QFileDialog::getOpenFileName(this,"Open File","C:\\Users\\yudou\\Videos\\Captures","mp4(*.mp4)");
         qDebug()<<path;
+        pPlaylist->addMedia(QUrl(path));
+        play();
     });
     connect(ui->btnPlayPause,&QPushButton::clicked,[=](){
         if(!isPlaying()){
@@ -20,12 +31,23 @@ MainWindow::MainWindow(QWidget *parent)
             pause();
         }
     });
+    connect(ui->btnStop,&QPushButton::clicked,[=](){
+        stop();
+    });
 
-    // 视频处理
-    pPlayer = new QMediaPlayer(this); // 放映员
-    pVideoWidget = new QVideoWidget(this); // 屏幕
+    connect(ui->horizontalSlider,&QSlider::valueChanged,[=](){
+        int sliderVal = ui->horizontalSlider->value();
+        qDebug()<<"slide value: "<<sliderVal;
+        qDebug()<<"player duration: "<<pPlayer->duration();
+        ui->lblTime->setText(QString::number(sliderVal));
+        pPlayer->setPosition((double)sliderVal/100*pPlayer->duration());
+    });
 
-    pPlayer->setVideoOutput(pVideoWidget);
+
+//    connect(timer,&QTimer::timeout,[=](){
+//        static int time = 1;
+//        ui->lblTime->setText(QString::number(time++));
+//    });
 }
 
 bool MainWindow::isPlaying(){
@@ -38,6 +60,8 @@ void MainWindow::play(){
     }
     is_playing = true;
     ui->btnPlayPause->setText("Pause");
+    pVideoWidget->resize(ui->lblVideo->size());
+    pPlayer->play();
 }
 
 void MainWindow::pause(){
@@ -46,6 +70,12 @@ void MainWindow::pause(){
     }
     is_playing = false;
     ui->btnPlayPause->setText("Play");
+    pPlayer->pause();
+}
+
+void MainWindow::stop(){
+    pPlayer->stop();
+    timer->stop();
 }
 
 MainWindow::~MainWindow()
